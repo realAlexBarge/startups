@@ -32,7 +32,7 @@ Choose A when idle hours are short, the latency target leaves no room for a cold
 Remove the last replica when traffic stops, and start one on the next request.
 
 - Cost: instance hours only while traffic exists, plus the cost of whatever covers requests during cold start.
-- Scaling signal: something must observe a request while no replica exists, because a load balancer with no healthy target returns errors. Use a queue or gateway in front of the engine that can hold or count requests, and scale on that. The platform mechanics (Karpenter node provisioning, ECS service desired count, EC2 Auto Scaling group minimum of zero) belong to `Skill("aws-core:aws-containers")` and `Skill("aws-core:aws-compute")`.
+- Scaling signal: something must observe a request while no replica exists, because with no registered target an Application Load Balancer returns HTTP 503 ([ALB troubleshooting](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-troubleshooting.html)). Use a queue or gateway in front of the engine that can hold or count requests, and scale on that. The platform mechanics (Karpenter node provisioning, ECS service desired count, EC2 Auto Scaling group minimum of zero) belong to `Skill("aws-core:aws-containers")` and `Skill("aws-core:aws-compute")`.
 - Scale-in delay: how long to wait after the last request before removing the replica. Set it from the hourly traffic profile, and include it in the break-even, since those minutes are billed.
 
 Requests that arrive during a cold start need one of these, decided in advance:

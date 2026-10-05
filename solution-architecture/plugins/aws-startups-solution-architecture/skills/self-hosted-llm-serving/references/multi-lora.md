@@ -2,7 +2,7 @@
 
 Each fine-tune deployed as its own endpoint carries its own idle GPU floor. Three fine-tunes of one base model on three replicas is three times the floor from `references/self-host-or-managed.md`, usually for traffic that one replica could serve. When the fine-tunes are LoRA adapters on the same base model, serve them from one engine: the base weights load once, and each request names the adapter it wants.
 
-A company with a committed fleet often keeps one endpoint per team for ownership and isolation, because the extra floors land on capacity it already pays for. From a fixed ceiling, that separation costs a full replica per fine-tune, so it needs a reason stronger than tidiness.
+One endpoint per fine-tune buys separate ownership, separate deploys and isolation between fine-tunes. From a fixed ceiling, that separation costs a full replica per fine-tune, so it needs a reason stronger than tidiness.
 
 ## When adapters replace endpoints
 

@@ -32,7 +32,7 @@ Make these in order. Each one has a default that the cost ceiling sets, and a re
 
 ### 1. Self-host or stay managed
 
-Compare the idle GPU floor (the smallest replica that fits, running all month) against measured per-token spend and against the two managed options that scale to zero: Bedrock Custom Model Import, billed per model copy per minute where the architecture and Region are supported, and SageMaker endpoints with inference components, which take minutes to provision from zero. Output a break-even traffic number and nothing else; do not judge the company's stage. Default to managed until measured traffic crosses that number. Read **`references/self-host-or-managed.md`**.
+Compare the idle GPU floor (the smallest replica that fits, running all month) against measured per-token spend and against the two managed options that scale to zero: Bedrock Custom Model Import, billed per model copy per minute where the architecture and Region are supported, and SageMaker endpoints with inference components, which take minutes to provision from zero. Output the break-even traffic number and the options ruled out by constraints; do not judge the company's stage. Default to managed until measured traffic crosses that number. Read **`references/self-host-or-managed.md`**.
 
 ### 2. Fit one GPU first
 

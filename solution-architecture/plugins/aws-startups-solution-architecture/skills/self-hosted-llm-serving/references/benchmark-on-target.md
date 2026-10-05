@@ -28,7 +28,7 @@ The vLLM docs warn that repeating `vllm bench serve` against the same server can
 3. Run the workload at increasing concurrency (for example 1, 2, 4, 8, 16, 32, then finer steps near the limit), long enough at each step for the latency percentiles to settle.
 4. At each step record p50 and p99 time to first token, p50 and p99 time per output token, output tokens per second, goodput, and error count.
 5. While it runs, scrape the engine's metrics and record the peak of each:
-   - vLLM: `vllm:kv_cache_usage_perc`, `vllm:num_requests_waiting`, `vllm:num_preemptions` and `vllm:time_to_first_token_seconds` ([metrics](https://docs.vllm.ai/en/v0.31.0/design/metrics/)).
+   - vLLM: `vllm:kv_cache_usage_perc`, `vllm:num_requests_waiting`, `vllm:num_preemptions` and `vllm:time_to_first_token_seconds` ([production metrics](https://docs.vllm.ai/en/v0.31.0/usage/metrics/)).
    - SGLang (with `--enable-metrics`): `sglang:token_usage`, `sglang:num_queue_reqs` and `sglang:time_to_first_token_seconds` ([production metrics](https://github.com/sgl-project/sglang/blob/v0.5.21/docs/docs/references/production_metrics.mdx)).
 
 The replica capacity is the highest concurrency at which the p99 targets still hold and there are no preemptions. Report it with the output tokens per second at that point. Those two numbers go into the break-even script in `references/self-host-or-managed.md`.

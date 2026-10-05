@@ -10,7 +10,7 @@ With a committed fleet, that jump is absorbed by capacity already paid for. From
 
 Two related traps visible in the same Price List data:
 
-- Larger sizes within a G family often keep one GPU. In g5, g6 and g6e, every size from xlarge to 16xlarge has a single GPU with the same GPU memory; moving up a size buys vCPUs and host memory, not KV cache.
+- Larger sizes within a G family often keep one GPU. In g5, g6 and g6e, the xlarge, 2xlarge, 4xlarge, 8xlarge and 16xlarge sizes each have one GPU with the same GPU memory (12xlarge and up have four or eight), per EC2 `DescribeInstanceTypes` in us-east-1 on 2026-10-05; moving up among the one-GPU sizes buys vCPUs and host memory, not KV cache.
 - A large single-GPU size can list above the family's multi-GPU size (g4dn.16xlarge lists above g4dn.12xlarge in us-east-1 on 2026-10-05). Compare per GPU memory, not per size name.
 
 ## Measure the inputs
@@ -38,7 +38,7 @@ Sources: vLLM v0.31.0 `vllm/v1/core/kv_cache_utils.py`; SGLang v0.5.21 [hyperpar
 1. Bound context. Set the maximum model length to the measured p99 request length plus a margin, not the model's advertised maximum. KV cache reserved for contexts nobody sends is memory taken from concurrency.
 2. Bound concurrency. Cap requests in flight at the concurrency the latency target needs. Past that point extra requests queue rather than evict others from the cache. vLLM documents that running short of KV cache causes preemption and recomputation, which hurts latency ([optimization guide](https://docs.vllm.ai/en/v0.31.0/configuration/optimization/)).
 3. Quantize the KV cache. An 8-bit KV cache dtype roughly halves cache memory per token against 16-bit. Run the evaluation set before and after.
-4. Quantize the weights. Check the pinned engine version's [quantization hardware table](https://docs.vllm.ai/en/v0.31.0/features/quantization/) against the GPU architecture (T4 is Turing, A10G is Ampere, L4 and L40S are Ada). Prefer a published quantized checkpoint of the same model to quantizing at load time. Accept it only if the evaluation set shows no regression the product cares about.
+4. Quantize the weights. Check the pinned engine version's [quantization hardware table](https://docs.vllm.ai/en/v0.31.0/features/quantization/) against the GPU architecture (T4 is Turing, A10G is Ampere, L4 and L40S are Ada, and the RTX PRO 4500 in g7 and the RTX PRO Server 6000 in g7e are Blackwell). The v0.31.0 table has no Blackwell column, so for g7 and g7e check the chosen method's own page and test it on the instance. Prefer a published quantized checkpoint of the same model to quantizing at load time. Accept it only if the evaluation set shows no regression the product cares about.
 5. Take a larger single GPU. Moving from a 22888 MiB GPU to a 45776 MiB or 98304 MiB GPU keeps one GPU and one replica. On 2026-10-05 in us-east-1, g6e.xlarge (one L40S, 45776 MiB) listed at about a third of g5.12xlarge (four A10G, 91552 MiB in total) (Price List, derived ratio).
 6. Only then, tensor parallelism across the GPUs of one instance. It is in scope for this skill when nothing above fits. Record why each earlier step failed, because the decision doubles the floor at minimum. Serving one model across several nodes is out of scope.
 

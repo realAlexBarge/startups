@@ -46,11 +46,11 @@ Record the line in the deployment's change record. It is the measured memory bud
 
 Online replicas restart: on deploys, node replacement and scale-out. Make the start time short and known.
 
-- Stage model weights in Amazon S3 at an immutable revision with a manifest, as the batch skill's `prepare-model-and-input.md` describes, and read them from there at start rather than from a public model hub. Use `Skill("aws-core:aws-storage")` for the storage mechanics.
+- Stage model weights in Amazon S3 at an immutable revision with a manifest, as `references/prepare-model-and-input.md` in `Skill("aws-startups-solution-architecture:self-hosted-llm-batch-inference")` describes, and read them from there at start rather than from a public model hub. Use `Skill("aws-core:aws-storage")` for the storage mechanics.
 - Keep the engine image in Amazon ECR, close to the cluster.
 - Measure the start in parts: capacity acquisition, node boot, image pull, weight load, and engine warm-up (compilation and CUDA graph capture). vLLM documents ways to shorten repeated boots, including reusing its compile cache and `--enforce-eager`, which skips CUDA graph capture at a cost in steady-state decode speed ([optimization and tuning](https://docs.vllm.ai/en/v0.31.0/configuration/optimization/)).
 - The EKS user guide lists cold-start reductions for inference Pods: SOCI parallel image pull (on by default in EKS Auto Mode for GPU instances), streaming weights from S3 to GPU memory, ECR over a VPC endpoint, and instance store caching ([Run AI/ML inference workloads on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/ml-inference.html)).
-- Gate traffic on readiness. Both engines expose `/health` on their HTTP server. On ECS with a load balancer, set the service's health check grace period longer than the measured start; the default is 0 ([ECS service properties](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ecs.CfnServiceProps.html)). On Kubernetes, use a startup probe sized the same way.
+- Gate traffic on readiness. Both engines expose `/health` on their HTTP server. On ECS with a load balancer, set the service's health check grace period longer than the measured start; the default is 0 ([ECS CreateService API reference](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_CreateService.html), `healthCheckGracePeriodSeconds`). On Kubernetes, use a startup probe sized the same way.
 
 ## GPU node prerequisites by platform
 
