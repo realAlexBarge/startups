@@ -37,7 +37,6 @@ Each skill is chosen because neither neighbor covers it and each is a recurring 
 
 Verified gaps: as of this writing, neither Agent Toolkit for AWS nor AWS Startup Advisor covers the following, and each is a recurring startup engagement topic. This is the call for contribution.
 
-- **Self-hosted inference serving.** Continuous batching, paged attention and KV cache behavior, concurrency and batch tuning, choosing a serving stack, and when a self-hosted endpoint genuinely beats a managed one on cost at real utilization. Currently zero coverage of the serving mechanics in either neighbor.
 - **Scale-to-zero architectures** where an idle environment must cost approximately nothing, including which managed services have a nonzero floor and what that floor actually is.
 - **Service quota and limit strategy** ahead of a launch or traffic event, treating quota as lead-time-bound rather than instantaneous.
 - **Compliance groundwork** (SOC 2, HIPAA) implemented by a team with no compliance function, scoped to the technical controls and evidence rather than the audit process.
