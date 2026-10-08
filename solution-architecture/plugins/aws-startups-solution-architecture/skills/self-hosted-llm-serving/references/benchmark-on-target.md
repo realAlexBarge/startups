@@ -1,6 +1,8 @@
 # Benchmark on the Target
 
-The break-even, the GPU choice and the idle-floor decision all depend on one measured number: how many concurrent requests one replica serves while still meeting the latency target. Measure it on the exact instance type, engine version, engine flags and model revision that will run in production, with prompts shaped like real traffic. A benchmark from another GPU, another engine version or a public dataset with different lengths does not transfer.
+A company with a committed GPU fleet can size from a rough benchmark and absorb the error in fleet headroom it already pays for. A startup cannot: the measured replica capacity sets the replica count in the break-even, the GPU choice and the idle-floor decision, so a capacity understated by one replica's worth adds a full GPU floor to the ceiling, and one overstated sends a replica more traffic than it can serve within the latency target, with no second replica behind it. The number to measure is how many concurrent requests one replica serves while still meeting the latency target.
+
+Measure it on the exact instance type, engine version, engine flags and model revision that will run in production, with prompts shaped like real traffic. A benchmark from another GPU, another engine version or a public dataset with different lengths does not transfer.
 
 For SageMaker endpoints, use the benchmark workflow in `Skill("aws-core:aws-ai-ml")` instead. This file covers self-managed engines on EKS, ECS or EC2.
 
@@ -13,13 +15,10 @@ For SageMaker endpoints, use the benchmark workflow in `Skill("aws-core:aws-ai-m
 
 ## Tools
 
-- vLLM: `vllm bench serve` against a running server ([benchmark CLI](https://docs.vllm.ai/en/v0.31.0/benchmarking/cli/)). Use `--dataset-name custom` with a JSONL file of real prompts and `--custom-output-len`, or `--dataset-name random` with `--random-input-len`, `--random-output-len` and `--random-range-ratio` set from the measured distribution. `--max-concurrency` caps requests in flight, `--request-rate` and `--burstiness` shape arrivals, and `--goodput ttft:<ms> tpot:<ms>` counts only requests that met the target. Save with `--save-result --save-detailed`.
-- SGLang: `python3 -m sglang.bench_serving` with `--dataset-name random`, `--random-input-len`, `--random-output-len`, `--max-concurrency` and `--num-prompts`, and `--flush-cache` to clear the prefix cache after warm-up ([bench_serving](https://github.com/sgl-project/sglang/blob/v0.5.21/docs/docs/developer_guide/bench_serving.mdx)).
-- The vLLM docs recommend [GuideLLM](https://github.com/vllm-project/guidellm) for benchmarking production vLLM servers, as more flexible in dataset loading and workload patterns than `vllm bench serve`.
+- vLLM: `vllm bench serve` against a running server ([benchmark CLI](https://docs.vllm.ai/en/v0.31.0/benchmarking/cli/)), with `--dataset-name custom` for a JSONL file of real prompts or `--dataset-name random` with lengths set from the measured distribution. `--goodput ttft:<ms> tpot:<ms>` counts only requests that met the latency target, which is the number this skill needs. Repeating it against the same server can reuse prompts left in the prefix cache and inflate throughput; vary `--seed`, restart the server, or use `vllm bench sweep serve`, which resets caches between runs.
+- SGLang: `python3 -m sglang.bench_serving` with `--max-concurrency` and `--flush-cache` to clear the prefix cache after warm-up ([bench_serving](https://github.com/sgl-project/sglang/blob/v0.5.21/docs/docs/developer_guide/bench_serving.mdx)).
 
 Run the client from a separate instance in the same Region and Availability Zone, so client CPU and network do not end up in the result. Pin the client tool version next to the engine version in the result file.
-
-The vLLM docs warn that repeating `vllm bench serve` against the same server can reuse prompts left in the prefix cache and inflate throughput; vary `--seed`, restart the server, or use `vllm bench sweep serve`, which resets caches between runs.
 
 ## Sweep concurrency against the latency target
 
@@ -45,4 +44,4 @@ Keep one result file per configuration with: instance type and Region, engine an
 
 ## Scaling signal from the same metrics
 
-The metrics that show saturation in the benchmark are the ones to scale on in production. Requests waiting and KV cache usage react before latency does; GPU utilization is a weak signal, because it reports the share of time any kernel was running, not how much KV cache or concurrency is left. Wire the chosen metric with `Skill("aws-core:aws-observability")` and the platform autoscaler with `Skill("aws-core:aws-containers")` or `Skill("aws-core:aws-compute")`, and set its threshold from the sweep, below the concurrency where the target broke.
+The metrics that show saturation in the benchmark are the ones to scale on in production, and with a minimum of one replica or zero they decide when the second GPU floor starts billing. Requests waiting and KV cache usage react before latency does; GPU utilization reports the share of time any kernel was running, not how much KV cache is left. Set the threshold from the sweep, below the concurrency where the target broke, and wire it with `Skill("aws-core:aws-observability")` and the platform autoscaler in `Skill("aws-core:aws-containers")` or `Skill("aws-core:aws-compute")`.

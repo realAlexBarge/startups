@@ -1,6 +1,6 @@
 # Self-Host or Stay Managed
 
-A self-managed engine has a cost floor that a per-token API does not: the smallest GPU replica that fits the model, billed every hour it runs. For a team with a committed fleet that floor is already paid. For a startup paying from a fixed ceiling it is new spend, so the question is a traffic threshold, and the answer is a number computed from measurements.
+A company with a committed GPU fleet can place the model on capacity it already pays for, so self-hosting costs it close to nothing extra. A startup has no fleet, so the first replica is new spend, billed every hour it runs whether or not traffic arrives. The question becomes a traffic threshold: how much measured traffic it takes before that idle GPU floor costs less than a per-token API or a managed option that scales to zero. The answer is a number computed from measurements.
 
 The output of this step is one break-even traffic number per option, plus the list of options that constraints rule out before any cost is compared. It makes no judgment about whether the company is early or late, and it does not recommend self-hosting on the strength of a price list.
 
@@ -58,13 +58,15 @@ Without this number, the self-managed row has no cost under load, and the compar
 
 Fetch every price with `Skill("aws-core:aws-billing-and-cost-management")` for the Region in scope, record the lookup date, and compute in a script. Do not do this arithmetic in prose.
 
+Use on-demand list prices before credits for every option. With a committed fleet, a replica is priced at the committed rate; a startup holds no commitment to amortize a GPU against, and committing to one for a year or more locks in the floor this step exists to avoid. Credits lower the bill only until they run out, while the floor keeps running, so a break-even computed after credits is one the ceiling does not have to survive yet.
+
 Inputs to the script:
 
 - The hourly traffic profile from the measurements above.
 - Per-token input and output prices for the per-token API.
 - For Custom Model Import, if not ruled out: units per copy, the price per unit per minute, the maximum concurrency per copy from the load test above, the copies needed in each hour (the hour's peak concurrency divided by the concurrency per copy, rounded up), and the number of 5-minute windows in a month that contain at least one request, derived from the hourly profile at 5-minute resolution if available.
 - For the self-managed engine: the hourly on-demand price of the chosen instance, replica capacity from the benchmark, the minimum replica count from the idle-floor decision, and fixed monthly costs that exist only for self-hosting (load balancer, cluster control plane if the cluster exists only for this model, NAT gateway, storage for weights).
-- Operator hours per month to keep the engine patched, pinned and benchmarked, as a separate line the team fills in. The ceiling pays for those hours too, and there is no platform team to absorb them.
+- Operator hours per month to keep the engine patched, pinned and benchmarked, as a separate line the team fills in, and the same line for each managed option. The ceiling pays for those hours like any other cost.
 
 What the script computes:
 

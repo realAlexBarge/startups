@@ -1,8 +1,6 @@
 # Several Fine-Tunes on One Base Model
 
-Each fine-tune deployed as its own endpoint carries its own idle GPU floor. Three fine-tunes of one base model on three replicas is three times the floor from `references/self-host-or-managed.md`, usually for traffic that one replica could serve. When the fine-tunes are LoRA adapters on the same base model, serve them from one engine: the base weights load once, and each request names the adapter it wants.
-
-One endpoint per fine-tune buys separate ownership, separate deploys and isolation between fine-tunes. From a fixed ceiling, that separation costs a full replica per fine-tune, so it needs a reason stronger than tidiness.
+A company with a committed GPU fleet can give each fine-tune its own endpoint, for separate ownership, separate deploys and isolation between fine-tunes, because the GPU under each one is capacity it already pays for. From a fixed ceiling, each of those endpoints carries its own idle GPU floor: three fine-tunes of one base model on three replicas is three times the floor from `references/self-host-or-managed.md`, usually for traffic that one replica could serve. So the default reverses. When the fine-tunes are LoRA adapters on the same base model, serve them from one engine: the base weights load once, and each request names the adapter it wants. Separate endpoints then need a reason stronger than tidiness.
 
 ## When adapters replace endpoints
 
@@ -37,9 +35,8 @@ SGLang v0.5.21 ([LoRA serving](https://github.com/sgl-project/sglang/blob/v0.5.2
 
 Adapter slots reserve GPU memory that the KV cache would otherwise use. After enabling adapters:
 
-1. Re-read the startup log lines in `references/engine-configuration.md`. The KV cache size and maximum concurrency will be lower than without adapters.
-2. Re-check the fit against the concurrency the latency target needs, using `references/fit-one-gpu.md`.
-3. Benchmark with the measured mix of adapter requests, not with base-model requests only. Set the batch adapter limit to the number of distinct adapters that are typically active at once, then confirm the latency target holds at that mix with `references/benchmark-on-target.md`.
+1. Re-read the startup log lines in `references/fit-one-gpu.md` and re-check the fit against the concurrency the latency target needs. The KV cache size and maximum concurrency will be lower than without adapters.
+2. Benchmark with the measured mix of adapter requests, not with base-model requests only. Set the batch adapter limit to the number of distinct adapters that are typically active at once, then confirm the latency target holds at that mix with `references/benchmark-on-target.md`.
 
 If the adapters no longer fit next to the KV cache the traffic needs, lower the adapter rank limit or the per-batch adapter count before considering a second replica.
 

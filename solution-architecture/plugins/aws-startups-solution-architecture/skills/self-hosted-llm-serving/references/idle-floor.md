@@ -1,8 +1,8 @@
 # Idle Floor: One Warm Replica or Scale to Zero
 
-The cheapest self-managed deployment that answers instantly is one warm replica, billed every hour. The cheapest one at idle is zero replicas, which costs a cold start on the next request. A company with spare budget runs at least two replicas for availability and treats the floor as noise. From a fixed ceiling, two replicas double the largest line in the break-even, so the choice is between one warm replica with no redundancy and scale to zero, made explicitly and priced against measured cold start.
+A company with a committed GPU fleet can run a second replica for availability, because its idle hours are capacity the company pays for anyway. From a fixed ceiling, a second warm replica doubles the largest line in the break-even. So the choice here is between one warm replica with no redundancy and scale to zero, made explicitly and priced against measured cold start.
 
-This file prices only the GPU replica floor. Other resources that cost money at zero traffic (load balancers, NAT gateways, cluster control planes) belong in the break-even inputs in `references/self-host-or-managed.md`; check their current floors with `Skill("aws-core:aws-billing-and-cost-management")`.
+The cheapest self-managed deployment that answers instantly is one warm replica, billed every hour. The cheapest one at idle is zero replicas, which costs a cold start on the next request. This file prices only the GPU replica floor. Other resources that cost money at zero traffic (load balancers, NAT gateways, cluster control planes) belong in the break-even inputs in `references/self-host-or-managed.md`; check their current floors with `Skill("aws-core:aws-billing-and-cost-management")`.
 
 ## Measure cold start first
 
@@ -12,9 +12,14 @@ Neither option can be priced without the cold-start time on the target platform.
 2. Node or instance boot until it can run the engine container.
 3. Image pull. Engine images are large; record the size.
 4. Model weight load into GPU memory.
-5. Engine warm-up until `/health` passes and the first request completes.
+5. Engine warm-up (compilation and CUDA graph capture) until `/health` passes and the first request completes.
 
-The sum is the time a user waits, or the time a fallback must cover. `references/engine-configuration.md` lists ways to shorten parts 3 to 5.
+The sum is the time a user waits, or the time a fallback must cover. With a fleet it only matters at scale-out; with one replica or zero it is what every user meets after a deploy, a crash or an idle period, so shorten it before choosing:
+
+- Stage model weights in Amazon S3 at an immutable revision with a manifest, as `references/prepare-model-and-input.md` in `Skill("aws-startups-solution-architecture:self-hosted-llm-batch-inference")` describes, and keep the engine image in Amazon ECR, not a public hub. Use `Skill("aws-core:aws-storage")` for the storage mechanics.
+- The EKS user guide lists cold-start reductions for inference Pods: SOCI parallel image pull (on by default in EKS Auto Mode for GPU instances), streaming weights from S3 to GPU memory, ECR over a VPC endpoint, and instance store caching ([Run AI/ML inference workloads on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/ml-inference.html)).
+- vLLM documents reusing its compile cache, and `--enforce-eager`, which skips CUDA graph capture at a cost in steady-state decode speed ([optimization and tuning](https://docs.vllm.ai/en/v0.31.0/configuration/optimization/)).
+- Gate traffic on readiness, because a request routed to a replica that is still loading fails. Both engines expose `/health`. On ECS with a load balancer, set the service's health check grace period longer than the measured start; the default is 0 ([ECS CreateService API reference](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_CreateService.html), `healthCheckGracePeriodSeconds`). On Kubernetes, size a startup probe the same way.
 
 ## Option A: one warm replica
 
@@ -45,13 +50,11 @@ Choose B when there are long idle periods (nights, weekends, a product with burs
 
 A scheduled middle ground is valid: warm during the hours the profile shows steady traffic, zero outside them. Price it in the same script.
 
-## Reduce cold start on EC2 with a warm pool
-
-On EC2 Auto Scaling, a warm pool can keep a pre-initialized instance in the `Stopped` state, so a scale-out skips boot and setup work. A stopped instance is not billed for instance usage, but its EBS volumes are, and each start is billed with a one-minute minimum ([start-instances](https://docs.aws.amazon.com/cli/latest/reference/ec2/start-instances.html)). Limitations that matter here: warm pools need an EBS root volume, do not support Spot in mixed instance groups, and with an EKS managed node group or an ECS cluster an instance can register with the cluster while it is still initializing ([warm pool limitations](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-warm-pools.html)). The weights still load into GPU memory on every start, so measure the start again with the warm pool in place.
+On EC2 Auto Scaling, a warm pool of stopped, pre-initialized instances skips boot and setup on scale-out; `Skill("aws-core:aws-compute")` covers its mechanics and limits. For the floor, what matters is that a stopped instance is not billed for instance usage but its EBS volumes are, and the weights still load into GPU memory on every start, so measure the start again with the warm pool in place. Read the [warm pool limitations](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-warm-pools.html) before using one under EKS or ECS, where an instance can register with the cluster while it is still initializing.
 
 ## Spot on a single replica
 
-Spot lowers the hourly price of the only replica, and adds a failure mode. EC2 sends a Spot interruption notice two minutes before it interrupts the instance ([Initiate a Spot Instance interruption](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/initiate-a-spot-instance-interruption.html)). With one replica, an interruption means no capacity until a replacement completes a full cold start, and GPU Spot capacity may not be available for the replacement.
+Spot lowers the hourly price of the only replica, and adds a failure mode. EC2 sends a Spot interruption notice two minutes before it interrupts the instance ([Initiate a Spot Instance interruption](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/initiate-a-spot-instance-interruption.html)). A fleet loses one replica of many; with one replica, an interruption means no capacity until a replacement completes a full cold start, and GPU Spot capacity may not be available for the replacement.
 
 Use Spot for the single replica only when the cold-start answer from Option B is already in place, so an interruption is handled the same way as scale from zero. Test it with a controlled interruption before relying on it. Without such a fallback, keep the single replica on On-Demand.
 
