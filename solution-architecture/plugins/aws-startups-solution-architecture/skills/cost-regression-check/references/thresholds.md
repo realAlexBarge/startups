@@ -1,6 +1,10 @@
 # Thresholds
 
-Set two absolute thresholds, one for the floor and one for the cost per unit, plus a cap on the total floor of the stack. Derive all three from the ceiling, keep them in a reviewed file in the repository, and let the bill owner change them.
+## What changes for a startup
+
+Set two absolute thresholds, one for the floor and one for the cost per unit, plus a cap on the total floor of the stack. Derive all three from the company's own monthly ceiling at list price before credits, keep them in a reviewed file in the repository, and let the bill owner change them.
+
+A large company sets a percentage of a stable baseline, priced at its own rates. That works when last month is a reliable base and the rates are the ones it will keep paying. Against a small ceiling that the company pays itself, often from credits, neither holds: last month is small, new, or credit-funded, and the amount billed today is not the one that applies when the credits end.
 
 ## Start from the ceiling
 
@@ -26,7 +30,7 @@ If the team has more than one unit (requests and tenants, for example), give eac
 
 ## Why not a percentage
 
-Percentage thresholds assume a stable bill to measure against. The upstream cost audit, for example, compares each service with the previous month and flags increases above 20 percent ([cost-audit.md](https://github.com/aws/agent-toolkit-for-aws/blob/main/plugins/aws-core/skills/aws-billing-and-cost-management/references/cost-audit.md)). That works for a running account with history. It fails here in three ways:
+The upstream cost audit compares each service with the previous month and flags increases above 20 percent ([cost-audit.md](https://github.com/aws/agent-toolkit-for-aws/blob/main/plugins/aws-core/skills/aws-billing-and-cost-management/references/cost-audit.md)). That is the right answer for a running account with history. Against a small, company-paid ceiling it fails in three ways:
 
 - On a small bill, a large percentage can be a few dollars, so the check fires on noise and the team learns to ignore it.
 - A first resource of a new kind has no previous month, so the percentage is undefined or infinite.
@@ -52,16 +56,16 @@ Make the bill owner the code owner of this file, so any change to it needs their
 
 ## Who decides on an exceedance
 
-The author and the bill owner decide in the pull request. There are three outcomes:
+The author and the bill owner decide in the pull request, because the ceiling is the company's own money and the bill owner is the person who can accept a new fixed charge against it. There are three outcomes:
 
 1. Change it. The author reduces the cost, for example by sharing an existing NAT gateway or lowering a minimum, and the next run shows the new numbers.
 2. Accept it. The author adds an entry to `accepted` in the same pull request with the reason. Because that edits the thresholds file, the bill owner's review is required, and the approval is recorded where the change is.
 3. Move the threshold. If the threshold itself is wrong, the bill owner changes it in a separate pull request, so the change to policy is reviewed on its own.
 
-Nothing is routed to anyone else. If the bill owner is also the author, the decision is still recorded in the file, which is what makes it visible later.
+If the bill owner is also the author, the decision is still recorded in the file, which is what makes it visible later.
 
 ## List price, on purpose
 
-Report list price: public on-demand rates, before credits, Free Tier, Savings Plans, Reserved Instances, and private pricing. The AWS Price List carries those on-demand rates, but it also includes perpetual Free Tier offers as zero-priced products, and the cost script drops them (see `estimators.md`). A Free Tier allowance is shared with everything else on the bill, so a change priced against it reads as free while the allowance lasts. The Price List does not include Spot or time-limited Free Tier offers, the Price List Query API does not return Savings Plans prices, and where a price list file and a service pricing page differ, AWS charges the price on the pricing page ([AWS Price List](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/price-changes.html)).
+Report list price: public on-demand rates, before credits, Free Tier, Savings Plans, Reserved Instances, and private pricing. A Free Tier allowance is shared with everything else on the bill, so a change priced against it reads as free while the allowance lasts; the cost script drops Free Tier products for that reason (see `estimators.md`). Where a price list file and a service pricing page differ, AWS charges the price on the pricing page ([AWS Price List](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/price-changes.html)).
 
-List price overstates the bill for a team with commitments or private pricing. The comment labels every number as list price so nobody mistakes it for the invoice. For a floor decision on a small bill, the overstatement is the safe direction.
+List price overstates the bill for a team with commitments or private pricing. The comment labels every number as list price so nobody mistakes it for the invoice. For a floor decision against a small ceiling, the overstatement is the safe direction.
